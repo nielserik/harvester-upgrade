@@ -1,18 +1,22 @@
+# Installation logs, upgrade from Debian 9, MySQL 5, Tomcat 8.
+
+
+## 1) Manual install in Debian 9 Vagrant box 
+
+```
 su -
 
-
-
 apt install git
+
 apt install maven
-
-
+```
 -- jdk11 pre-installed
-
+```
 git clone https://github.com/indexdata/localindices
 
 cd localindices
 mvn install
-
+```
 
 Install jdk8:  https://adoptium.net/temurin/releases/
 
@@ -29,30 +33,31 @@ Vagrant box:
 
 The vagrant box is debian 9 (stretch), cannot update to newer Mariadb on that. 
 
-
-
-
 ***
 
+## 2) New attempt with Ubuntu Focal Vagrant box
 
 New Vagrant box - Ubuntu Focal (20)
-
+```
  vagrant init ubuntu/focal64
  vagrant up
+```
 
-Has ssh, git already. Good.
+Has ssh, git already. 
 
-No Java already. Good, can install jdk 8
+No Java already, can install jdk 8
 
+```
  vagrant ssh
  sudo su
  apt update
  apt install openjdk-8-jre-headless
- 
+``` 
  
 Make share to localindices on host
+```
  config.vm.synced_folder "/home/nielserik/gitprojects/localindices", "/vagrant_data/localindices"
- 
+``` 
  
 Install MySQL 8:
 
@@ -60,12 +65,13 @@ Install MySQL 8:
    download mysql-apt-config_0.8.24-1_all.deb
    
   in /vagrant do
+  ```
    sudo dpkg -i mysql-apt-config_0.8.24-1_all.deb     (select MySQL Server & Cluster, mysql-8.0)
    
    sudo apt-get update 
    apt-get install mysql-server
-       no root password 
-
+       # no root password 
+  ``` 
        Also:
      │ MySQL 8 uses a new authentication based on improved SHA256-based password methods. It is recommended that all new MySQL Server installations use this method going  │ 
      │ forward. This new authentication plugin requires new versions of connectors and clients, with support for this new authentication method (caching_sha2_password).   │ 
@@ -80,16 +86,17 @@ Install MySQL 8:
    
        retain legacy auth
        
-       
+   ```    
    sudo su
    mysql   
     create database localindices;
-    
+  ```  
     
     
      (readme was: grant all privileges on localindices.* to 'localidxadm'@'localhost' 
                  identified by 'localidxadmpass';
-     now: 
+     now:
+```
        CREATE USER 'localidxadm'@'localhost' IDENTIFIED BY 'localidxadmpass';
        GRANT ALL PRIVILEGES ON localindices.* TO 'localidxadm'@'localhost';             
   
@@ -103,24 +110,24 @@ Install MySQL 8:
       mysql -u localidxadm -plocalidxadmpass localindices <sql/v2.12/2020-04-01.sql
       mysql -u localidxadm -plocalidxadmpass localindices <sql/v2.13/2020-04-15.sql
       mysql -u localidxadm -plocalidxadmpass localindices <sql/v2.14/2020-04-14.sql
-
+```
 
     From the yaml file:
-    
+```    
        apt-get install python-apt
        apt-get install apt-transport-https
        apt-get install ca-certificates
- 
+``` 
        but "no candidate" for tomcat8, so
-       
+```       
        apt update
        apt-cache search tomcat
-       
+```       
        Finds tomcat9, so
-       
+```       
        apt install tomcat9
        apt install tomcat9-admin
-       
+```       
        From localindices/doc/dev-notes.md  (but for tomcat9): 
          Add the following lines into /etc/tomcat9/tomcat-users.xml to give access to the Tomcat admin tool:
          <role rolename="manager-gui"/>
@@ -129,7 +136,7 @@ Install MySQL 8:
          $ sudo /usr/sbin/service tomcat9 restart
          
        And more from that doc, adapted:
-       
+```       
          mkdir -p /var/log/masterkey/harvester
          chown tomcat:tomcat /var/log/masterkey/harvester
          sudo mkdir -p /etc/masterkey/harvester
@@ -140,20 +147,17 @@ Install MySQL 8:
          sudo ln -s /vagrant_data/localindices/etc/harvester-context.xml /etc/tomcat9/Catalina/localhost/harvester.xml
          sudo ln -s /vagrant_data/localindices/harvester-admin/target/harvester-admin /usr/share/masterkey/harvester-admin
          sudo ln -s /vagrant_data/localindices/etc/harvester-admin-context.xml /etc/tomcat9/Catalina/localhost/harvester-admin.xml
-         
+```         
         
+## 3) Using modified version of deploy-dev.yml with certain parts done manually
+
+Using modified version of deploy-dev.yml, see old [deploy-dev-old.yml](./dev-deploy-old.yml) and new [deploy-dev-new.yml](./dev-deploy-new.yml) 
+
+
+vagrant up,   yml file without localindices db setup, and then, afterwards, manually: 
  
-
-Using modified version of deploy-dev.yml, doing this stuff manually  
-
-See old deploy-dev-old.yml and deploy-dev-new.yml 
-
-
-vagrant up,   yml file without localindices db setup, and then afterwards: 
- 
-        
--- Access to writing logs:
-
+```        
+## Access to writing logs:
 
 sudo mkdir -p /etc/systemd/system/tomcat9.service.d
 echo -e "[Service]\nReadWritePaths=/var/log/masterkey" | sudo tee /etc/systemd/system/tomcat9.service.d/logging-allow.conf
@@ -161,7 +165,7 @@ sudo systemctl daemon-reload    # necessary?
 sudo /usr/sbin/service tomcat9 restart
          
 
--- Logging into mysql to create localindices
+## Logging into mysql to create localindices
 $ cd /vagrant
 
 $ mysql
@@ -192,6 +196,6 @@ mysql -u localidxadm -plocalidxadmpass localindices <sql/v2.14/2020-04-14.sql
 
 
 sudo /usr/sbin/service tomcat9 restart
-      
+```      
          
          
